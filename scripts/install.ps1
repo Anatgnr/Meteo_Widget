@@ -19,9 +19,23 @@ try {
             throw 'Rust est requis pour compiler. Utiliser le fichier WeatherGlass-Setup.exe deja fourni, ou installer Rust stable MSVC et les outils C++ Visual Studio.'
         }
 
+        # npm ci replaces node_modules; a running Vite keeps Rollup's native module locked on Windows.
+        $projectModulesPattern = [regex]::Escape((Join-Path $projectRoot 'node_modules') + '\')
+        $previews = @(Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object {
+            $_.CommandLine -match $projectModulesPattern -and $_.CommandLine -match '\\vite\\bin\\vite\.js(?=["\s]|$)'
+        })
+        foreach ($preview in $previews) {
+            $process = Get-Process -Id $preview.ProcessId -ErrorAction SilentlyContinue
+            if ($process) {
+                Write-Host "Arret de la previsualisation Vite de ce projet (PID $($preview.ProcessId))..."
+                Stop-Process -InputObject $process -ErrorAction Stop
+                if (-not $process.WaitForExit(5000)) { throw 'La previsualisation Vite ne se termine pas. Fermer sa console avant de relancer.' }
+            }
+        }
+
         Write-Host 'Installation des dependances du projet...'
         & npm.cmd ci
-        if ($LASTEXITCODE -ne 0) { throw 'Echec de npm ci.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Echec de npm ci. Si npm indique EPERM sur node_modules, fermer les autres outils de ce projet qui utilisent Rollup (Vite, Vitest), puis relancer.' }
 
         Write-Host 'Compilation de WeatherGlass et creation de l''installateur. La premiere compilation peut prendre plusieurs minutes...'
         & npm.cmd run tauri build -- --bundles nsis

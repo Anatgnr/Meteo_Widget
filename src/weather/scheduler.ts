@@ -2,6 +2,7 @@ import type { City, WeatherSnapshot } from '../types';
 import type { Storage } from '../services/storage';
 import type { WeatherProvider } from './providers';
 import { fuseForecasts } from './fusion';
+import { emptyLearning, learn, type Learning, type Observation } from './learning';
 
 export type WeatherState = { data: WeatherSnapshot | null; loading: boolean; stale: boolean; error: string | null };
 type Listener = (state: WeatherState) => void;
@@ -14,7 +15,7 @@ type Entry = {
 export class WeatherScheduler {
   private entries = new Map<string, Entry>();
   private timer?: ReturnType<typeof setInterval>;
-  constructor(private providers: WeatherProvider[], private cache: Storage, private ttlMs = 600_000, private now = Date.now) {}
+  constructor(private providers: WeatherProvider[], private cache: Storage, private ttlMs = 600_000, private now = Date.now, private automaticTimer = true) {}
 
   subscribe(city: City, listener: Listener): () => void {
     let entry = this.entries.get(city.id);
@@ -26,7 +27,7 @@ export class WeatherScheduler {
     entry.lastAccess = this.now();
     listener(entry.state);
     void this.load(entry);
-    this.timer ??= setInterval(() => this.tick(), 30_000);
+    if (this.automaticTimer) this.timer ??= setInterval(() => this.tick(), 30_000);
     const current = entry;
     return () => {
       current.consumers.delete(listener);
@@ -81,7 +82,16 @@ export class WeatherScheduler {
         if (controller.signal.aborted || !this.active(entry)) return;
         const available = results.flatMap(r => r.status === 'fulfilled' ? [r.value] : []);
         if (!available.length) throw new Error('Connexion météo indisponible. Nouvelle tentative automatique.');
-        const data = fuseForecasts(available);
+        let learning: Learning | undefined;
+        try {
+          const [history, observations] = await Promise.all([this.cache.get<Learning>(`learning:${entry.city.id}`), this.cache.get<Observation[]>(`observations:${entry.city.id}`)]);
+          if (controller.signal.aborted || !this.active(entry)) return;
+          learning = learn(history ?? emptyLearning(), available.flatMap(s => s.hourly), observations ?? [], this.now());
+          if (controller.signal.aborted || !this.active(entry)) return;
+          await this.cache.set(`learning:${entry.city.id}`, learning);
+        } catch { /* Weather remains available if the optional evaluation archive is unavailable. */ }
+        if (controller.signal.aborted || !this.active(entry)) return;
+        const data = fuseForecasts(available, {}, learning);
         if (results.some(r => r.status === 'rejected')) data.warnings.push('Une source est indisponible ; les autres restent affichées.');
         entry.failures = 0; entry.nextAttempt = 0;
         try { await this.cache.set(this.key(entry.city.id), data); } catch { data.warnings.push('Enregistrement local indisponible.'); }

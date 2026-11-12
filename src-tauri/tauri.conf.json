@@ -11,10 +11,11 @@
   },
   "app": {
     "windows": [{
-      "label": "main", "title": "WeatherGlass", "width": 660, "height": 410,
-      "minWidth": 390, "minHeight": 395,
-      "decorations": false, "transparent": true, "shadow": true,
-      "windowEffects": { "effects": ["mica", "acrylic"] },
+      "label": "main", "title": "WeatherGlass", "width": 320, "height": 180,
+      "resizable": false, "skipTaskbar": true, "focus": false, "visible": false,
+      "decorations": false, "transparent": true, "shadow": false,
+      "alwaysOnTop": false, "alwaysOnBottom": true,
+      "windowEffects": { "effects": ["acrylic"], "color": "#18181c18" },
       "backgroundColor": "#00000000"
     }],
     "security": {
@@ -25,6 +26,6 @@
     "active": true, "targets": ["nsis"],
     "shortDescription": "La météo et les prochaines pluies sur votre bureau",
     "windows": { "nsis": { "languages": ["French"], "displayLanguageSelector": false, "installMode": "currentUser" } },
-    "icon": ["icons/icon.ico"]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
   }
 }

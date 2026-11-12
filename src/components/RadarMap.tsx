@@ -4,10 +4,12 @@ import 'leaflet/dist/leaflet.css';
 import { Pause, Play, Radio, X } from 'lucide-react';
 import type { City } from '../types';
 import { getJson } from '../services/network';
+import { storage } from '../services/storage';
 
 type Frame = { time: number; path: string };
-let metadataCache: { at: number; frames: Frame[]; host: string } | null = null;
-export default function RadarMap({ city, onClose }: { city: City; onClose(): void }) {
+type Metadata = { at: number; frames: Frame[]; host: string };
+let metadataCache: Metadata | null = null;
+export default function RadarMap({ city, onClose, miniature = false }: { city: City; onClose(): void; miniature?: boolean }) {
   const element = useRef<HTMLDivElement>(null), map = useRef<L.Map | null>(null), overlay = useRef<L.TileLayer | null>(null);
   const [frames, setFrames] = useState<Frame[]>([]), [host, setHost] = useState('');
   const [index, setIndex] = useState(0), [playing, setPlaying] = useState(false), [error, setError] = useState(''), [loading, setLoading] = useState(true);
@@ -25,12 +27,18 @@ export default function RadarMap({ city, onClose }: { city: City; onClose(): voi
     const controller = new AbortController();
     async function load() {
       try {
+        if (!metadataCache) {
+          const saved = await storage.get<Metadata>('radar:metadata').catch(() => null);
+          if (saved && Number.isFinite(saved.at) && saved.at <= Date.now() && saved.host === 'https://tilecache.rainviewer.com' && Array.isArray(saved.frames) && saved.frames.length > 0 && saved.frames.length <= 13 && saved.frames.every(f => Number.isFinite(f.time) && typeof f.path === 'string' && /^\/v2\/radar\/[a-zA-Z0-9_-]{1,64}$/.test(f.path))) metadataCache = saved;
+        }
+        if (controller.signal.aborted) return;
         if (!metadataCache || Date.now() - metadataCache.at > 300_000) {
           const data = await getJson('https://api.rainviewer.com/public/weather-maps.json', controller.signal) as { host?: string; radar?: { past?: Frame[] } };
           if (data.host !== 'https://tilecache.rainviewer.com' || !Array.isArray(data.radar?.past)) throw new Error('Métadonnées radar invalides');
           const past = data.radar.past.filter(f => Number.isFinite(f.time) && typeof f.path === 'string' && /^\/v2\/radar\/[a-zA-Z0-9_-]{1,64}$/.test(f.path)).slice(-13);
           if (!past.length) throw new Error('Aucune image radar disponible');
           metadataCache = { at: Date.now(), frames: past, host: data.host };
+          await storage.set('radar:metadata', metadataCache).catch(() => {});
         }
         if (!controller.signal.aborted) { setHost(metadataCache.host); setFrames(metadataCache.frames); setIndex(metadataCache.frames.length - 1); }
       } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Radar indisponible'); }
@@ -62,15 +70,13 @@ export default function RadarMap({ city, onClose }: { city: City; onClose(): voi
     handle = requestAnimationFrame(step); return () => cancelAnimationFrame(handle);
   }, [playing, frames.length]);
   const time = (value: number) => new Intl.DateTimeFormat('fr', { hour: '2-digit', minute: '2-digit', timeZone: city.timezone }).format(value * 1000);
-  return <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-    <section className="radar-modal glass" role="dialog" aria-modal="true" aria-label="Radar des précipitations">
+  return <section className={`radar-modal glass inline-panel ${miniature ? 'radar-miniature' : ''}`} aria-label={miniature ? 'Aperçu radar observé' : 'Radar des précipitations'}>
       <header className="modal-header"><div><span className="eyebrow">UNE VUE D’ENSEMBLE</span><h2><Radio size={20}/> Radar · {city.name}</h2></div><button className="icon-button" onClick={onClose} aria-label="Fermer le radar"><X size={20}/></button></header>
       <div className="radar-map" ref={element}/>
       {(error || tileError) && <p className="inline-warning" role="alert">{error || 'Certaines tuiles sont indisponibles. Une zone vide ne signifie pas une absence de pluie.'}</p>}
       {loading && <p className="radar-status" role="status">Chargement des observations radar…</p>}
-      <div className="radar-controls"><button className="icon-button" disabled={!frames.length} aria-label={playing ? 'Mettre en pause' : 'Lire le radar'} onClick={() => setPlaying(!playing)}>{playing ? <Pause size={19}/> : <Play size={19}/>}</button><input aria-label="Heure du radar" type="range" min="0" max={Math.max(0, frames.length - 1)} value={index} disabled={!frames.length} onChange={e => { setPlaying(false); setIndex(Number(e.target.value)); }}/><time>{frames[index] ? time(frames[index].time) : '—'}</time></div>
+      <div className="radar-controls">{!miniature && <><button className="icon-button" disabled={!frames.length} aria-label={playing ? 'Mettre en pause' : 'Lire le radar'} onClick={() => setPlaying(!playing)}>{playing ? <Pause size={19}/> : <Play size={19}/>}</button><input aria-label="Heure du radar" type="range" min="0" max={Math.max(0, frames.length - 1)} value={index} disabled={!frames.length} onChange={e => { setPlaying(false); setIndex(Number(e.target.value)); }}/></>}<time>{frames[index] ? time(frames[index].time) : '—'}</time></div>
       <div className="radar-legend"><span>Faible</span><i/><span>Forte</span><span>Réflectivité radar</span></div>
       <p className="radar-note">Observations passées · aucune prévision extrapolée. Couverture variable selon les radars. Zoom limité à 7 par le fournisseur.</p>
-    </section>
-  </div>;
+    </section>;
 }

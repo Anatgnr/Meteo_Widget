@@ -1,10 +1,11 @@
 import type { ForecastPoint, WeatherSnapshot } from '../types';
+import { learnedWeight, type Learning } from './learning';
 
 export type WeightFactors = { reliability: number; freshness: number; geographic: number; horizon: number };
 export const INITIAL_FACTORS: WeightFactors = { reliability: 1, freshness: 1, geographic: 1, horizon: 1 };
-const variables = ['temperatureC', 'precipitationProbability', 'precipitationMm', 'cloudCover', 'windSpeedKmh'] as const;
+const variables = ['temperatureC', 'precipitationProbability', 'precipitationMm', 'cloudCover', 'windSpeedKmh', 'apparentC', 'humidity'] as const;
 
-export function fuseForecasts(snapshots: WeatherSnapshot[], factors: Record<string, WeightFactors> = {}): WeatherSnapshot {
+export function fuseForecasts(snapshots: WeatherSnapshot[], factors: Record<string, WeightFactors> = {}, learning?: Learning): WeatherSnapshot {
   if (!snapshots.length) throw new Error('Aucune source disponible');
   const base = snapshots[0];
   if (snapshots.some(s => s.cityId !== base.cityId)) throw new Error('Villes incompatibles');
@@ -22,8 +23,8 @@ export function fuseForecasts(snapshots: WeatherSnapshot[], factors: Record<stri
       for (const p of points) {
         const f = factors[p.modelId] ?? INITIAL_FACTORS;
         // Retrieval time is deliberately not a proxy for model production time.
-        const weight = f.reliability * f.freshness * f.geographic * f.horizon;
-        if (p[key] !== null && Number.isFinite(weight) && weight > 0) { total += p[key]! * weight; weights += weight; }
+        const weight = f.reliability * f.freshness * f.geographic * f.horizon * (learning ? learnedWeight(learning, p, key) : 1);
+        if (p[key] != null && Number.isFinite(weight) && weight > 0) { total += p[key]! * weight; weights += weight; }
       }
       output[key] = weights ? total / weights : null;
     }

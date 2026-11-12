@@ -23,3 +23,8 @@ export const storage: Storage = {
     else Object.keys(localStorage).filter(k => k.startsWith('wg:')).forEach(k => localStorage.removeItem(k));
   },
 };
+
+export async function clearWeatherCache() {
+  if (isTauri()) await invoke('clear_cache');
+  else Object.keys(localStorage).filter(key => key.startsWith('wg:weather:') || key.startsWith('wg:radar:')).forEach(key => localStorage.removeItem(key));
+}

@@ -37,6 +37,7 @@ export function normalize(raw: unknown, city: City, retrievedAt: string, modelId
       temperatureC: at(hourly.temperature_2m, i), precipitationProbability: at(hourly.precipitation_probability, i),
       precipitationMm: at(hourly.precipitation, i), cloudCover: at(hourly.cloud_cover, i),
       windSpeedKmh: at(hourly.wind_speed_10m, i), isDay: at(hourly.is_day, i) === null ? null : at(hourly.is_day, i) === 1,
+      apparentC: at(hourly.apparent_temperature, i), humidity: at(hourly.relative_humidity_2m, i), weatherCode: at(hourly.weather_code, i),
       temporalResolutionMinutes: 60, forecastHorizonMinutes: Math.max(0, (Date.parse(validAt) - Date.parse(retrievedAt)) / 60_000),
     };
   });
@@ -61,8 +62,8 @@ export function openMeteoProvider(model?: string): WeatherProvider {
       const params = new URLSearchParams({
         latitude: String(city.latitude), longitude: String(city.longitude),
         current: 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day',
-        hourly: 'temperature_2m,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,is_day',
-        timezone: 'GMT', timeformat: 'unixtime', forecast_hours: '24', wind_speed_unit: 'kmh',
+        hourly: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,is_day',
+        timezone: city.timezone, timeformat: 'unixtime', forecast_days: '10', past_days: '1', wind_speed_unit: 'kmh',
       });
       if (model) params.set('models', model);
       return normalize(await getJson(`https://api.open-meteo.com/v1/forecast?${params}`, signal), city, new Date().toISOString(), model);

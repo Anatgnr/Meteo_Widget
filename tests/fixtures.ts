@@ -27,3 +27,18 @@ export const apiFixture = (now = NOW) => {
     },
   };
 };
+
+export const weekFixture = (now = Date.now()) => {
+  const data = apiFixture(now), hours = 264;
+  const start = Math.floor(now / 86_400_000) * 86_400_000 - 86_400_000;
+  return { ...data, hourly: {
+    time: Array.from({ length: hours }, (_, i) => start / 1000 + i * 3600),
+    temperature_2m: Array.from({ length: hours }, (_, i) => 14 + Math.sin(i / 24 * Math.PI * 2) * 5),
+    apparent_temperature: Array.from({ length: hours }, (_, i) => 12 + Math.sin(i / 24 * Math.PI * 2) * 5),
+    relative_humidity_2m: Array(hours).fill(78), weather_code: Array(hours).fill(61),
+    precipitation: Array.from({ length: hours }, (_, i) => i % 24 < 6 ? .4 : 0),
+    precipitation_probability: Array.from({ length: hours }, (_, i) => i % 24 < 6 ? 65 : 10),
+    cloud_cover: Array.from({ length: hours }, (_, i) => i % 24 < 6 ? 85 : 25),
+    wind_speed_10m: Array(hours).fill(12), is_day: Array.from({ length: hours }, (_, i) => i % 24 >= 7 && i % 24 < 18 ? 1 : 0),
+  } };
+};

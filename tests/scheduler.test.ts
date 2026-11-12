@@ -8,7 +8,7 @@ const memory = (): Storage => {
   const values = new Map<string, unknown>();
   return { async get<T>(key: string) { return (values.get(key) ?? null) as T | null; }, async set(key, value) { values.set(key, value); }, async clear() { values.clear(); } };
 };
-const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const flush = async () => { for (let i = 0; i < 24; i++) await Promise.resolve(); };
 const schedulers: WeatherScheduler[] = [];
 const make = (...args: ConstructorParameters<typeof WeatherScheduler>) => { const scheduler = new WeatherScheduler(...args); schedulers.push(scheduler); return scheduler; };
 afterEach(() => { schedulers.forEach(s => s.dispose()); schedulers.length = 0; vi.restoreAllMocks(); });
@@ -48,7 +48,7 @@ describe('ordonnanceur des seules villes actives', () => {
     const count = oldListener.mock.calls.length;
     scheduler.subscribe({ ...BORDEAUX, id: 'paris', name: 'Paris' }, vi.fn()); await flush();
     resolve(snapshot()); await flush();
-    expect(oldListener).toHaveBeenCalledTimes(count); expect(write).toHaveBeenCalledTimes(1);
+    expect(oldListener).toHaveBeenCalledTimes(count); expect(write.mock.calls.filter(([key]) => key.startsWith('weather:'))).toHaveLength(1);
   });
   it('affiche le cache périmé hors ligne et applique un backoff', async () => {
     let now = NOW; const cache = memory(); await cache.set(`weather:test:${BORDEAUX.id}`, snapshot({ retrievedAt: '2026-11-11T09:30:00Z' }));

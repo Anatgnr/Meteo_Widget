@@ -61,6 +61,14 @@ describe('fusion explicable', () => {
 });
 
 describe('événements et fuseaux', () => {
+  it('repère les reprises intermittentes et une intensification sans transformer les trous en pauses', () => {
+    const points = [.2, 0, .3, 1.5].map((value, i) => point({ precipitationMm: value, validAt: new Date(NOW + (i + 1) * 3_600_000).toISOString() }));
+    const events = detectEvents(snapshot({ hourly: points }), NOW);
+    expect(events.some(e => e.kind === 'intermittent')).toBe(true);
+    expect(events.some(e => e.kind === 'intensify')).toBe(true);
+    points[1].precipitationMm = null;
+    expect(detectEvents(snapshot({ hourly: points }), NOW).some(e => e.kind === 'intermittent')).toBe(false);
+  });
   const dry = (hour: number, changes = {}) => point({ validAt: `2026-11-12T${hour}:00:00Z`, precipitationMm: 0, cloudCover: 85, ...changes });
   it('détecte une fin durable, avec un intervalle plutôt qu’une minute fictive', () => {
     const events = detectEvents(snapshot({ hourly: [point(), dry(11), dry(12)] }), NOW);

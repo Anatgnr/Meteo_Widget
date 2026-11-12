@@ -9,6 +9,7 @@ export type ForecastPoint = {
   temperatureC: number | null; precipitationProbability: number | null;
   precipitationMm: number | null; cloudCover: number | null;
   windSpeedKmh: number | null; isDay: boolean | null;
+  apparentC?: number | null; humidity?: number | null; weatherCode?: number | null;
   temporalResolutionMinutes: number; forecastHorizonMinutes: number;
 };
 
@@ -25,13 +26,16 @@ export type WeatherSnapshot = {
 };
 
 export type RainEvent = {
-  kind: 'start' | 'end' | 'clear'; from: string; to: string;
+  kind: 'start' | 'end' | 'clear' | 'intensify' | 'intermittent'; from: string; to: string;
 };
 
 export type Settings = {
   theme: 'auto' | 'dark' | 'light'; opacity: number; blur: number;
   accent: string; compact: boolean; alwaysOnTop: boolean;
   refreshMinutes: number; multiModel: boolean;
+  displayMode: 'desktop';
+  compactWidth: number; compactHeight: number; expandedWidth: number; expandedHeight: number;
+  sourceModels: string[]; retentionDays: number; startWithWindows: boolean; notifications: boolean;
 };
 
 export const BORDEAUX: City = {
