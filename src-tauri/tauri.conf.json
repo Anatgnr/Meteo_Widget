@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "WeatherGlass",
+  "version": "0.1.0",
+  "identifier": "fr.weatherglass.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "label": "main", "title": "WeatherGlass", "width": 660, "height": 410,
+      "minWidth": 390, "minHeight": 395,
+      "decorations": false, "transparent": true, "shadow": true,
+      "windowEffects": { "effects": ["mica", "acrylic"] },
+      "backgroundColor": "#00000000"
+    }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob: https://tile.openstreetmap.org https://tilecache.rainviewer.com; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.open-meteo.com https://geocoding-api.open-meteo.com https://api.rainviewer.com"
+    }
+  },
+  "bundle": {
+    "active": true, "targets": ["nsis"],
+    "shortDescription": "La météo et les prochaines pluies sur votre bureau",
+    "windows": { "nsis": { "languages": ["French"], "displayLanguageSelector": false, "installMode": "currentUser" } },
+    "icon": ["icons/icon.ico"]
+  }
+}

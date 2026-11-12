@@ -1,0 +1,17 @@
+{
+  "measuredAt": "2026-11-12T09:44:52.917Z",
+  "runtime": "Chromium headless / Vite development / live APIs",
+  "startupToWeatherMs": 888,
+  "jsHeapUsedMiB": 9.15,
+  "mainThreadBusyPercentOver5Seconds": 0.01,
+  "weatherRequests": 1,
+  "radarRequestsWhileClosed": 0,
+  "pageErrors": [],
+  "currentDisplay": "14°\nPluie faible\n\nRessenti 14° · Nouvelle-Aquitaine",
+  "limits": "Browser measurements only. These are not total application RAM, native CPU, or Windows startup measurements.",
+  "liveRadarCheck": {
+    "frames": 13,
+    "loadedTiles": 16,
+    "warnings": []
+  }
+}
